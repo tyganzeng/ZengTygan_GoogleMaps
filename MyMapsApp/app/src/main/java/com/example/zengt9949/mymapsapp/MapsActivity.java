@@ -3,12 +3,20 @@ package com.example.zengt9949.mymapsapp;
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Criteria;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.Toast;
 
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -16,9 +24,18 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
+
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
+    private EditText locationSearch;
     private GoogleMap mMap;
+    private LocationManager locationManager;
+    private Location myLocation;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +84,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
             mMap.setMyLocationEnabled(true);
         }
+
+        locationSearch = (EditText) findViewById(R.id.editText_addr);
     }
 
     public void changeView(View view){
@@ -74,6 +93,86 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.setMapType(mMap.MAP_TYPE_NORMAL);
         } else {
             mMap.setMapType(mMap.MAP_TYPE_SATELLITE);
+        }
+    }
+
+    public void onSearch(View view){
+        String location = locationSearch.getText().toString();
+        List<Address> addressList = null;
+        List<Address> addressListZip = null;
+
+        //Use LocationManager for user location
+        //Implement the LocationListener interface to setup location services
+        LocationManager service = (LocationManager) getSystemService(LOCATION_SERVICE);
+        Criteria criteria = new Criteria();
+        String provider = service.getBestProvider(criteria, false);
+
+
+        Log.d("MyMapsApp","onSearch: location = " + location);
+        Log.d("MyMapsApp","onSearch: provider " + provider);
+
+        LatLng userLocation = null;
+
+        //Check the last known location, need to specifically list the provider (network or gps)
+
+        try{
+            if(locationManager != null) {
+                Log.d("MyMapsApp","onSearch: locationManager is not null");
+
+                if((myLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)) != null){
+                    userLocation = new LatLng(myLocation.getLatitude(), myLocation.getLongitude());
+                    Log.d("MyMapsApp","onSearch: using NETWORK_PROVIDER userLocation is "
+                            + myLocation.getLatitude() + " " + myLocation.getLongitude());
+                    Toast.makeText(this,"UserLoc " + myLocation.getLatitude() + " " + myLocation.getLongitude(), Toast.LENGTH_SHORT);
+                } else if((myLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)) != null){
+                    userLocation = new LatLng(myLocation.getLatitude(), myLocation.getLongitude());
+                    Log.d("MyMapsApp","onSearch: using GPS_PROVIDER userLocation is "
+                            + myLocation.getLatitude() + " " + myLocation.getLongitude());
+                    Toast.makeText(this,"UserLoc " + myLocation.getLatitude() + " " + myLocation.getLongitude(), Toast.LENGTH_SHORT);
+                } else{
+                    Log.d("MyMapsApp","onSearch: myLocation is null from getLastKnownLocation");
+                }
+            } else {
+                Log.d("MyMapsApp","onSearch: locationManager is null");
+            }
+        }
+        catch(SecurityException | IllegalArgumentException e){
+            Log.d("MyMapsApp","onSearch: Exception getLastKnownLocation");
+            Toast.makeText(this,"onSearch: Exception getLastKnownLocation", Toast.LENGTH_SHORT);
+        }
+
+        //Get the location if it exists
+        if(!location.matches("")){
+            Log.d("MyMapsApp","onSearch: location field is populated");
+            Geocoder geocoder = new Geocoder(this, Locale.US);
+            Log.d("MyMapsApp","onSearch: created Geocoder");
+            try{
+                //Get a List of the addresses
+                addressList = geocoder.getFromLocationName(location, 100,
+                        userLocation.latitude - (5.0/60),
+                        userLocation.longitude - (5.0/60),
+                        userLocation.latitude + (5.0/60),
+                        userLocation.longitude + (5.0/60));
+                Log.d("MyMapsApp","onSearch: addressList is created");
+
+            }
+            catch(IOException e){
+                e.printStackTrace();
+            }
+
+            if(!addressList.isEmpty()) {
+                Log.d("MyMapsApp", "onSearch: addressList size is " + addressList.size());
+                for (int i = 0; i < addressList.size(); i++) {
+                    Address address = addressList.get(i);
+                    LatLng latLng = new LatLng(address.getLatitude(), address.getLongitude());
+
+                    //Place a marker on the map
+                    mMap.addMarker(new MarkerOptions().position(latLng).title(i+ ": " + address.getSubThoroughfare()
+                    + address.getSubThoroughfare()));
+                    mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+
+                }
+            }
         }
     }
 }
