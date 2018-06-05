@@ -7,6 +7,7 @@ import android.location.Address;
 import android.location.Criteria;
 import android.location.Geocoder;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
@@ -34,7 +35,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     private LocationManager locationManager;
     private Location myLocation;
+    private boolean isGPSEnabled;
+    private boolean isNetworkEnabled;
+    private boolean gotMyLocationOneTime;
 
+    private static final long MIN_TIME_BW_UPDATES = 1000 * 5; //updates in msec
+    private static final float MiN_DISTANCE_CHANGE_FOR_UPDATES = 0.0f;
+    private static final int MY_LOC_BOOM_FACTOR = 17;
 
 
     @Override
@@ -86,6 +93,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         locationSearch = (EditText) findViewById(R.id.editText_addr);
+
+        gotMyLocationOneTime = false;
+        getLocation();
     }
 
     public void changeView(View view){
@@ -173,6 +183,149 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 }
             }
+        }
+    }
+
+    public void getLocation(){
+        try{
+            locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+
+            //Get GPS status, isProviderEnabled returns true if user has enabled GPS
+            isGPSEnabled = locationManager.isProviderEnabled(locationManager.GPS_PROVIDER);
+            if(isGPSEnabled){
+                Log.d("MyMapsApp","getLocation: GPS is enabled");
+            }
+
+            isNetworkEnabled = locationManager.isProviderEnabled(locationManager.NETWORK_PROVIDER);
+            if(isNetworkEnabled){
+                Log.d("MyMapsApp","getLocation: Network is enabled");
+            }
+
+            if(!isGPSEnabled && !isNetworkEnabled){
+                Log.d("MyMapsApp", "getLocation: no provider enabled");
+            } else {
+                if(isNetworkEnabled){
+                    //request location updates
+                    if(ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                            && ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+                        return;
+                    }
+                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
+                            MIN_TIME_BW_UPDATES,
+                            MiN_DISTANCE_CHANGE_FOR_UPDATES, locationListenerNetwork);
+                }
+                if(isGPSEnabled){
+                    if(ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                            && ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+                        return;
+                    }
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                            MIN_TIME_BW_UPDATES,
+                            MiN_DISTANCE_CHANGE_FOR_UPDATES, locationListenerNetwork);
+                }
+            }
+
+        }
+        catch(Exception e){
+            Log.d("MyMapsApp", "getLocation: Exception in getLocation");
+            e.printStackTrace();
+
+
+        }
+
+    }
+
+    //LocationListener to setup callbacks for requestLocationUpdates
+    LocationListener locationListenerNetwork = new LocationListener() {
+        @Override
+        public void onLocationChanged(Location location) {
+
+            dropAmarker(LocationManager.NETWORK_PROVIDER);
+
+            //Check if doing one time, if so remove updates to both gps and network'
+            if(gotMyLocationOneTime == false){
+                locationManager.removeUpdates(this);
+                locationManager.removeUpdates(locationListenerGPS);
+                gotMyLocationOneTime = true;
+            } else {
+                if(ActivityCompat.checkSelfPermission(MapsActivity.this,Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                        && ActivityCompat.checkSelfPermission(MapsActivity.this,Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+                    return;
+                }
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
+                        MIN_TIME_BW_UPDATES,
+                        MiN_DISTANCE_CHANGE_FOR_UPDATES, locationListenerNetwork);
+            }
+
+
+        }
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+            Log.d("MyMapsApp","locationListenerNetwork: status change");
+            Toast.makeText(MapsActivity.this,"status change",Toast.LENGTH_LONG).show();
+        }
+
+        @Override
+        public void onProviderEnabled(String provider) {
+
+        }
+
+        @Override
+        public void onProviderDisabled(String provider) {
+
+        }
+    };
+
+    LocationListener locationListenerGPS = new LocationListener() {
+        @Override
+        public void onLocationChanged(Location location) {
+
+            dropAmarker(LocationManager.GPS_PROVIDER);
+
+            //Check if doing one time, if so remove updates to both gps and network'
+            if(gotMyLocationOneTime == false){
+                locationManager.removeUpdates(this);
+                locationManager.removeUpdates(locationListenerNetwork);
+                gotMyLocationOneTime = true;
+            } else {
+                if(ActivityCompat.checkSelfPermission(MapsActivity.this,Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                        && ActivityCompat.checkSelfPermission(MapsActivity.this,Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+                    return;
+                }
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                        MIN_TIME_BW_UPDATES,
+                        MiN_DISTANCE_CHANGE_FOR_UPDATES, locationListenerGPS);
+            }
+
+
+        }
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+            Log.d("MyMapsApp","locationListenerNetwork: status change");
+            Toast.makeText(MapsActivity.this,"status change",Toast.LENGTH_LONG).show();
+        }
+
+        @Override
+        public void onProviderEnabled(String provider) {
+
+        }
+
+        @Override
+        public void onProviderDisabled(String provider) {
+
+        }
+    };
+    public void dropAmarker(String provider) {
+        LatLng userLocation = null;
+        try {
+            if ((myLocation = locationManager.getLastKnownLocation(provider)) != null) {
+                userLocation = new LatLng(myLocation.getLatitude(), myLocation.getLongitude());
+            }
+            mMap.addMarker(new MarkerOptions().position(userLocation).title("Current Location"));
+        } catch (SecurityException e) {
+            Log.d("MyMapsApp", "Exception in dropAmarker");
         }
     }
 }
