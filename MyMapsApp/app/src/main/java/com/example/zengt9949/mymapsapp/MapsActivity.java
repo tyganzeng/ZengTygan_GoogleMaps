@@ -9,6 +9,7 @@ import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.location.LocationProvider;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -22,6 +23,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -38,6 +40,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean isGPSEnabled;
     private boolean isNetworkEnabled;
     private boolean gotMyLocationOneTime;
+    private boolean notTrackingMyLocation = true;
 
     private static final long MIN_TIME_BW_UPDATES = 1000 * 5; //updates in msec
     private static final float MiN_DISTANCE_CHANGE_FOR_UPDATES = 0.0f;
@@ -75,9 +78,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         LatLng sandiego = new LatLng(32.72, -117.16);
         mMap.addMarker(new MarkerOptions().position(sandiego).title("Born here"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sandiego));
+       // mMap.moveCamera(CameraUpdateFactory.newLatLng(sandiego));
 
-        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+        /*if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             Log.d("MyMapsApp", "Failed FINE Permission Check");
             ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_FINE_LOCATION}, 2);
         }
@@ -90,7 +93,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if((ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)||
             (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
             mMap.setMyLocationEnabled(true);
-        }
+        }*/
 
         locationSearch = (EditText) findViewById(R.id.editText_addr);
 
@@ -288,7 +291,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 locationManager.removeUpdates(this);
                 locationManager.removeUpdates(locationListenerNetwork);
                 gotMyLocationOneTime = true;
-            } else {
+            }
+            /*else {
                 if(ActivityCompat.checkSelfPermission(MapsActivity.this,Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                         && ActivityCompat.checkSelfPermission(MapsActivity.this,Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
                     return;
@@ -296,7 +300,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
                         MIN_TIME_BW_UPDATES,
                         MiN_DISTANCE_CHANGE_FOR_UPDATES, locationListenerGPS);
-            }
+            }*/
 
 
         }
@@ -305,6 +309,41 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         public void onStatusChanged(String provider, int status, Bundle extras) {
             Log.d("MyMapsApp","locationListenerNetwork: status change");
             Toast.makeText(MapsActivity.this,"status change",Toast.LENGTH_LONG).show();
+            switch(status){
+                case LocationProvider.AVAILABLE:
+                    Log.d("MyMapsApp","locationListenerNetwork: GPS available");
+                    Toast.makeText(MapsActivity.this,"location provider available",Toast.LENGTH_LONG).show();
+                    break;
+
+                case LocationProvider.OUT_OF_SERVICE:
+                    Log.d("MyMapsApp","locationListenerNetwork: GPS out of service");
+                    Toast.makeText(MapsActivity.this,"status change",Toast.LENGTH_LONG).show();
+                    if(ActivityCompat.checkSelfPermission(MapsActivity.this,Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                            && ActivityCompat.checkSelfPermission(MapsActivity.this,Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+                        return;
+                    }
+                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
+                            MIN_TIME_BW_UPDATES,
+                            MiN_DISTANCE_CHANGE_FOR_UPDATES, locationListenerNetwork);
+
+                    break;
+
+                case LocationProvider.TEMPORARILY_UNAVAILABLE:
+                    if(ActivityCompat.checkSelfPermission(MapsActivity.this,Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                            && ActivityCompat.checkSelfPermission(MapsActivity.this,Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+                        return;
+                    }
+                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
+                            MIN_TIME_BW_UPDATES,
+                            MiN_DISTANCE_CHANGE_FOR_UPDATES, locationListenerNetwork);
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                            MIN_TIME_BW_UPDATES,
+                            MiN_DISTANCE_CHANGE_FOR_UPDATES, locationListenerNetwork);
+                    break;
+                default:
+
+
+            }
         }
 
         @Override
@@ -320,12 +359,41 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void dropAmarker(String provider) {
         LatLng userLocation = null;
         try {
+            if(locationManager != null) {
+                if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                        && ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    return;
+                }
+            }
+
             if ((myLocation = locationManager.getLastKnownLocation(provider)) != null) {
                 userLocation = new LatLng(myLocation.getLatitude(), myLocation.getLongitude());
+                CameraUpdate update = CameraUpdateFactory.newLatLngZoom(userLocation,MY_LOC_BOOM_FACTOR);
+                if(provider == LocationManager.GPS_PROVIDER) {
+                    mMap.addMarker(new MarkerOptions().position(userLocation).title("Current Location").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+                } else if(provider == LocationManager.NETWORK_PROVIDER){
+                    mMap.addMarker(new MarkerOptions().position(userLocation).title("Current Location").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
+                }
+                mMap.animateCamera(update);
+            } else{
+                Log.d("MyMapsApp","dropAmarker: location is null");
             }
-            mMap.addMarker(new MarkerOptions().position(userLocation).title("Current Location"));
+
         } catch (SecurityException e) {
             Log.d("MyMapsApp", "Exception in dropAmarker");
+        }
+    }
+
+    public void trackMyLocation(View view){
+
+        if(notTrackingMyLocation){
+            getLocation();
+            notTrackingMyLocation = false;
+
+        } else {
+            locationManager.removeUpdates(locationListenerGPS);
+            locationManager.removeUpdates(locationListenerNetwork);
+            notTrackingMyLocation = true;
         }
     }
 }
