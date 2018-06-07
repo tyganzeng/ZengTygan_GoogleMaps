@@ -224,7 +224,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                     locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
                             MIN_TIME_BW_UPDATES,
-                            MiN_DISTANCE_CHANGE_FOR_UPDATES, locationListenerNetwork);
+                            MiN_DISTANCE_CHANGE_FOR_UPDATES, locationListenerGPS);
                 }
             }
 
@@ -259,6 +259,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         MIN_TIME_BW_UPDATES,
                         MiN_DISTANCE_CHANGE_FOR_UPDATES, locationListenerNetwork);
             }
+
 
 
         }
@@ -395,5 +396,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             locationManager.removeUpdates(locationListenerNetwork);
             notTrackingMyLocation = true;
         }
+    }
+
+    public void clear (View view){
+        mMap.clear();
     }
 }
