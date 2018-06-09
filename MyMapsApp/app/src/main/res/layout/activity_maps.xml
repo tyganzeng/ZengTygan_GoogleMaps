@@ -35,6 +35,7 @@
             android:layout_weight="1"
             android:ems="10"
             android:inputType="textPersonName"
+            android:text="Starbucks"
             tools:text="Search" />
 
         <Button
@@ -53,7 +54,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:onClick="dropAmarker2"
+            android:onClick="trackMyLocation"
             android:text="Track" />
 
         <Button
