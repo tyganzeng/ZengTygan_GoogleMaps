@@ -179,7 +179,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //Get the location if it exists
         if(!location.matches("")){
             Log.d("MyMapsApp","onSearch: location field is populated");
-            Toast.makeText(MapsActivity.this,"Searching",Toast.LENGTH_LONG).show();
+
             Geocoder geocoder = new Geocoder(this, Locale.US);
             Log.d("MyMapsApp","onSearch: created Geocoder");
             Log.d("MyMapsApp","slope is "+ slope);
@@ -190,7 +190,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         userLocation.longitude - (5.0/60),
                         userLocation.latitude + (5.0/60),
                         userLocation.longitude + (5.0/60));
+                Toast.makeText(MapsActivity.this,"address list size is " + addressList.size(),Toast.LENGTH_SHORT).show();
 
+
+
+                for(int i =0;i<addressList.size();i++){
+                    if(lastLocationY<(1*slope*lastLocationX-slope*currentLocationX + currentLocationY)){
+                        if(addressList.get(i).getLatitude()<(1*slope*addressList.get(i).getLongitude()-slope*currentLocationX + currentLocationY)){
+                            addressList.remove(i);
+                        }
+                    }
+                    if(lastLocationY>(1*slope*lastLocationX-slope*currentLocationX + currentLocationY)){
+                        if(addressList.get(i).getLatitude()>(1*slope*addressList.get(i).getLongitude()-slope*currentLocationX + currentLocationY)){
+                            addressList.remove(i);
+                        }
+                    }
+                }
 
 
 
@@ -215,17 +230,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                 }*/
 
-                Toast.makeText(MapsActivity.this,"addressList is created",Toast.LENGTH_LONG).show();
+                Toast.makeText(MapsActivity.this,"addressList is created",Toast.LENGTH_SHORT).show();
                 Log.d("MyMapsApp","onSearch: addressList is created");
             }
             catch(Exception e){
                 e.printStackTrace();
                 Toast.makeText(MapsActivity.this,"failed",Toast.LENGTH_LONG).show();
             }
-
+            Toast.makeText(MapsActivity.this,"address list size is " + addressList.size(),Toast.LENGTH_SHORT).show();
+            Log.d("MyMapsApp", "onSearch: addressList size is " + addressList.size());
             if(!addressList.isEmpty()) {
-                Toast.makeText(MapsActivity.this,"address list size is " + addressList.size(),Toast.LENGTH_LONG).show();
-                Log.d("MyMapsApp", "onSearch: addressList size is " + addressList.size());
+
+
                 for (int i = 0; i < addressList.size(); i++) {
                     Address address = addressList.get(i);
                     LatLng latLng = new LatLng(address.getLatitude(), address.getLongitude());
@@ -233,7 +249,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     //Place a marker on the map
                     mMap.addMarker(new MarkerOptions().position(latLng).title(i+ ": " + address.getSubThoroughfare()
                     + address.getSubThoroughfare()));
-                    //mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+                    mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
 
                 }
             }
