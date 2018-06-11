@@ -52,6 +52,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private double currentLocationX = 0.0;
     private double currentLocationY = 0.0;
 
+
+
+
     private double distanceX;
     private double distanceY;
     private double distanceX2;
@@ -83,11 +86,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Add a marker in Sydney and move the camera
         LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
+        //mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
         //mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
 
         LatLng sandiego = new LatLng(32.72, -117.16);
-        mMap.addMarker(new MarkerOptions().position(sandiego).title("Born here"));
+        //mMap.addMarker(new MarkerOptions().position(sandiego).title("Born here"));
        // mMap.moveCamera(CameraUpdateFactory.newLatLng(sandiego));
 
         /*if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
@@ -166,6 +169,124 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
         slope = (currentLocationY -lastLocationY ) / (currentLocationX - lastLocationX);
+
+        Toast.makeText(MapsActivity.this,"slope is " + slope,Toast.LENGTH_LONG).show();
+        slope = -1*(1/slope);
+
+
+
+
+        //Get the location if it exists
+        if(!location.matches("")){
+            Log.d("MyMapsApp","onSearch: location field is populated");
+            Toast.makeText(MapsActivity.this,"Searching",Toast.LENGTH_LONG).show();
+            Geocoder geocoder = new Geocoder(this, Locale.US);
+            Log.d("MyMapsApp","onSearch: created Geocoder");
+            Log.d("MyMapsApp","slope is "+ slope);
+            try{
+                //Get a List of the addresses
+                addressList = geocoder.getFromLocationName(location, 100,
+                        userLocation.latitude - (5.0/60),
+                        userLocation.longitude - (5.0/60),
+                        userLocation.latitude + (5.0/60),
+                        userLocation.longitude + (5.0/60));
+
+
+
+
+
+                /*if(Math.abs(slope) > 5){
+                    if(lastLocationY > currentLocationY){
+                        for(int i=0;i<addressList.size();i++){
+                            if(addressList.get(i).getLongitude() > currentLocationX){
+                                addressList.remove(i);
+                            }
+                        }
+                    }
+                }
+
+                if(Math.abs(slope - 1) > .5){
+                    if(lastLocationY > currentLocationY){
+                        for(int i=0;i<addressList.size();i++){
+                            if(addressList.get(i).getLatitude() > currentLocationY){
+                                addressList.remove(i);
+                            }
+                        }
+                    }
+                }*/
+
+                Toast.makeText(MapsActivity.this,"addressList is created",Toast.LENGTH_LONG).show();
+                Log.d("MyMapsApp","onSearch: addressList is created");
+            }
+            catch(Exception e){
+                e.printStackTrace();
+                Toast.makeText(MapsActivity.this,"failed",Toast.LENGTH_LONG).show();
+            }
+
+            if(!addressList.isEmpty()) {
+                Toast.makeText(MapsActivity.this,"address list size is " + addressList.size(),Toast.LENGTH_LONG).show();
+                Log.d("MyMapsApp", "onSearch: addressList size is " + addressList.size());
+                for (int i = 0; i < addressList.size(); i++) {
+                    Address address = addressList.get(i);
+                    LatLng latLng = new LatLng(address.getLatitude(), address.getLongitude());
+
+                    //Place a marker on the map
+                    mMap.addMarker(new MarkerOptions().position(latLng).title(i+ ": " + address.getSubThoroughfare()
+                    + address.getSubThoroughfare()));
+                    //mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+
+                }
+            }
+        }
+    }
+
+    /*public void onSearch2(View view){
+        String location = locationSearch.getText().toString();
+        List<Address> addressList = null;
+        List<Address> addressListZip = null;
+
+        //Use LocationManager for user location
+        //Implement the LocationListener interface to setup location services
+        LocationManager service = (LocationManager) getSystemService(LOCATION_SERVICE);
+        Criteria criteria = new Criteria();
+        String provider = service.getBestProvider(criteria, false);
+
+
+        Log.d("MyMapsApp","onSearch: location = " + location);
+        Log.d("MyMapsApp","onSearch: provider " + provider);
+
+        LatLng userLocation = null;
+
+        //Check the last known location, need to specifically list the provider (network or gps)
+
+        try{
+            if(locationManager != null) {
+                Log.d("MyMapsApp","onSearch: locationManager is not null");
+
+                if((myLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)) != null){
+                    userLocation = new LatLng(myLocation.getLatitude(), myLocation.getLongitude());
+                    Log.d("MyMapsApp","onSearch: using NETWORK_PROVIDER userLocation is "
+                            + myLocation.getLatitude() + " " + myLocation.getLongitude());
+                    Toast.makeText(this,"UserLoc " + myLocation.getLatitude() + " " + myLocation.getLongitude(), Toast.LENGTH_SHORT);
+                } else if((myLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)) != null){
+                    userLocation = new LatLng(myLocation.getLatitude(), myLocation.getLongitude());
+                    Log.d("MyMapsApp","onSearch: using GPS_PROVIDER userLocation is "
+                            + myLocation.getLatitude() + " " + myLocation.getLongitude());
+                    Toast.makeText(this,"UserLoc " + myLocation.getLatitude() + " " + myLocation.getLongitude(), Toast.LENGTH_SHORT);
+                } else{
+                    Log.d("MyMapsApp","onSearch: myLocation is null from getLastKnownLocation");
+                }
+            } else {
+                Log.d("MyMapsApp","onSearch: locationManager is null");
+            }
+        }
+        catch(SecurityException | IllegalArgumentException e){
+            Log.d("MyMapsApp","onSearch: Exception getLastKnownLocation");
+            Toast.makeText(this,"onSearch: Exception getLastKnownLocation", Toast.LENGTH_SHORT);
+        }
+
+
+        slope = (currentLocationY -lastLocationY ) / (currentLocationX - lastLocationX);
         distanceX2 = 5 / Math.sqrt(1 + Math.pow(slope, 2));
         distanceY2 = slope * distanceX2;
         Toast.makeText(MapsActivity.this,"slope is " + slope,Toast.LENGTH_LONG).show();
@@ -187,28 +308,48 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     if(Math.abs(currentLocationY) > Math.abs(lastLocationY)){
                         Toast.makeText(MapsActivity.this,"traveling Northwest",Toast.LENGTH_LONG).show();
 
-                        addressList = geocoder.getFromLocationName(location, 100,
+                        /*addressList = geocoder.getFromLocationName(location, 100,
                                 userLocation.latitude + (distanceX/60),
                                 userLocation.longitude + (distanceY/60),
                                 userLocation.latitude - (distanceX/60) + (distanceX2/60),
                                 userLocation.longitude - (distanceY/60) - (distanceY2/60));
+                        Toast.makeText(MapsActivity.this,"distanceX/60 is " + distanceX/60 ,Toast.LENGTH_LONG).show();
                         LatLng latLng = new LatLng(userLocation.latitude + (distanceX/60), userLocation.longitude + (distanceY/60));
-                        mMap.addMarker(new MarkerOptions().position(latLng).title("Bottom Left"));
+                        double blXcoordinate = userLocation.latitude + (distanceX/60);
+                        mMap.addMarker(new MarkerOptions().position(latLng).title(" " + blXcoordinate));
                         LatLng latLng2 = new LatLng(userLocation.latitude - (distanceX/60) + (distanceX2/60), userLocation.longitude - (distanceY/60) - (distanceY2/60));
                         mMap.addMarker(new MarkerOptions().position(latLng2).title("Top Right"));
                         LatLng latLng3 = new LatLng(userLocation.latitude - (distanceX/60), userLocation.longitude - (distanceY/60));
-                        mMap.addMarker(new MarkerOptions().position(latLng3).title("Bottom Right"));
+                        mMap.addMarker(new MarkerOptions().position(latLng3).title("Bottom Left"));
                         LatLng latLng4 = new LatLng(userLocation.latitude + (distanceX/60) + (distanceX2/60), userLocation.longitude + (distanceY/60) - (distanceY2/60));
-                        mMap.addMarker(new MarkerOptions().position(latLng3).title("Top Left"));
+                        mMap.addMarker(new MarkerOptions().position(latLng3).title("Top Left"));*/
+
+                        /*addressList = geocoder.getFromLocationName(location, 100,
+                                userLocation.latitude - (distanceY/60),
+                                userLocation.longitude + (distanceX/60),
+                                userLocation.latitude + (distanceY/60) + (distanceY2/60),
+                                userLocation.longitude - (distanceX/60) + (distanceX2/60));
+                        Toast.makeText(MapsActivity.this,"distanceX/60 is " + distanceX/60 ,Toast.LENGTH_LONG).show();
+
+                        LatLng latLng = new LatLng(userLocation.latitude - (distanceY/60), userLocation.longitude + (distanceX/60));
+                        double blXcoordinate = userLocation.latitude - (distanceY/60);
+                        mMap.addMarker(new MarkerOptions().position(latLng).title(" " + blXcoordinate));
+                        LatLng latLng2 = new LatLng(userLocation.latitude + (distanceY/60) + (distanceY2/60), userLocation.longitude - (distanceX/60) + (distanceX2/60));
+                        mMap.addMarker(new MarkerOptions().position(latLng2).title("Top Right"));
+                        LatLng latLng3 = new LatLng(userLocation.latitude + (distanceY/60), userLocation.longitude - (distanceX/60));
+                        mMap.addMarker(new MarkerOptions().position(latLng3).title("Bottom Left"));
+                        LatLng latLng4 = new LatLng(userLocation.latitude - (distanceY/60) + (distanceY2/60), userLocation.longitude + (distanceX/60) + (distanceX2/60));
+                        mMap.addMarker(new MarkerOptions().position(latLng4).title("Top Left"));
 
                     } else {
 
                         Toast.makeText(MapsActivity.this,"traveling Southeast",Toast.LENGTH_LONG).show();
                         addressList = geocoder.getFromLocationName(location, 100,
-                                userLocation.latitude + (distanceX/60),
-                                userLocation.longitude + (distanceY/60),
-                                userLocation.latitude - (distanceX/60) + (distanceX2/60),
-                                userLocation.longitude - (distanceY/60) - (distanceY2/60));
+                                userLocation.latitude - (distanceX/60),
+                                userLocation.longitude - (distanceY/60),
+                                userLocation.latitude + (distanceX/60) - (distanceX2/60),
+                                userLocation.longitude + (distanceY/60) + (distanceY2/60));
+
                     }
                 } else{
                     if(Math.abs(currentLocationY) > Math.abs(lastLocationY))
@@ -232,12 +373,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     }
                 }
-                //Get a List of the addresses
-                /*addressList = geocoder.getFromLocationName(location, 100,
-                        userLocation.latitude - (5.0/60),
-                        userLocation.longitude - (5.0/60),
-                        userLocation.latitude + (5.0/60),
-                        userLocation.longitude + (5.0/60));*/
+
                 Toast.makeText(MapsActivity.this,"addressList is created",Toast.LENGTH_LONG).show();
                 Log.d("MyMapsApp","onSearch: addressList is created");
             }
@@ -256,12 +392,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     //Place a marker on the map
                     mMap.addMarker(new MarkerOptions().position(latLng).title(i+ ": " + address.getSubThoroughfare()
                     + address.getSubThoroughfare()));
-                    mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+                    //mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
 
                 }
             }
         }
-    }
+    }*/
+
 
     public void getLocation(){
         try{
@@ -452,8 +589,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 lastLocationX = currentLocationX;
                 lastLocationY = currentLocationY;
-                currentLocationX = myLocation.getLatitude();
-                currentLocationY = myLocation.getLongitude();
+                currentLocationX = myLocation.getLongitude();
+                currentLocationY = myLocation.getLatitude();
                 Toast.makeText(MapsActivity.this, + myLocation.getLatitude() + " " + myLocation.getLongitude(), Toast.LENGTH_LONG).show();
 
 
