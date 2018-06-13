@@ -44,7 +44,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="right"
-            android:onClick="onSearch"
+            android:onClick="onSearch2"
             android:text="Search">
 
         </Button>
@@ -62,7 +62,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:onClick="clear"
+            android:onClick="clearMarkers"
             android:text="Clear" />
 
 
